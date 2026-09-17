@@ -10,9 +10,18 @@ permissions:
 
 jobs:
   plan:
-    name: Terraform Plan
+    name: Terraform Plan (${{ matrix.environment }})
     runs-on: ubuntu-latest
     environment: lab
+
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod]
+
+    defaults:
+      run:
+        working-directory: environments/${{ matrix.environment }}
 
     steps:
       - name: Checkout code
@@ -48,7 +57,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           script: |
-            const output = `#### Terraform Plan 📖
+            const output = `#### Terraform Plan 📖 \`${{ matrix.environment }}\`
             \`\`\`
             ${{ steps.plan.outputs.stdout }}
             \`\`\`
