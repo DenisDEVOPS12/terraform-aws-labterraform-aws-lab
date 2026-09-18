@@ -1,8 +1,8 @@
 name: Terraform Apply (prod release)
 
 on:
-  push:
-    tags: ['20*.*.*-*']
+  release:
+    types: [published]
 
 permissions:
   contents: read
