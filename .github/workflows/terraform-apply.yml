@@ -21,9 +21,6 @@ jobs:
           - dir: dev
             gh_environment: lab
             auth: keys
-          - dir: prod
-            gh_environment: lab
-            auth: keys
           - dir: security
             gh_environment: Security
             auth: oidc
@@ -79,6 +76,6 @@ jobs:
           VERSION="$(date +'%Y.%m.%d')-${{ github.run_number }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Deploy $VERSION (dev, prod, security)"
+          git tag -a "$VERSION" -m "Deploy $VERSION (dev, security) - triggers prod release"
           git push origin "$VERSION"
           echo "Tagged $VERSION"
