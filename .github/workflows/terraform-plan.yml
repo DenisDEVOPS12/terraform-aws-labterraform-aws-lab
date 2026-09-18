@@ -7,16 +7,61 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  id-token: write
 
 jobs:
   plan:
-    name: Terraform Plan
+    name: Terraform Plan (${{ matrix.dir }})
     runs-on: ubuntu-latest
-    environment: lab
+    environment: ${{ matrix.gh_environment }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dir: dev
+            gh_environment: lab
+            auth: keys
+          - dir: prod
+            gh_environment: lab
+            auth: keys
+          - dir: security
+            gh_environment: Security
+            auth: oidc
+
+    defaults:
+      run:
+        working-directory: environments/${{ matrix.dir }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # TODO: remove once OIDC role assumption for the security account is confirmed working
+      - name: Debug OIDC token claims
+        if: matrix.auth == 'oidc'
+        run: |
+          echo "role-to-assume resolved to: '${{ vars.AWS_ROLE_ARN }}'"
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
+          MOD=$(( ${#PAYLOAD} % 4 ))
+          if [ "$MOD" -eq 2 ]; then PAYLOAD="${PAYLOAD}=="; elif [ "$MOD" -eq 3 ]; then PAYLOAD="${PAYLOAD}="; fi
+          echo "$PAYLOAD" | base64 -d | jq .
+
+      - name: Configure AWS Credentials (access key)
+        if: matrix.auth == 'keys'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Configure AWS Credentials (OIDC)
+        if: matrix.auth == 'oidc'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -24,9 +69,6 @@ jobs:
           terraform_version: 1.9.0
 
       - name: Terraform Init
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: terraform init
 
       - name: Terraform Format Check
@@ -37,9 +79,6 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: terraform plan -no-color -out=tfplan
         continue-on-error: true
 
@@ -48,7 +87,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           script: |
-            const output = `#### Terraform Plan 📖
+            const output = `#### Terraform Plan 📖 \`${{ matrix.dir }}\`
             \`\`\`
             ${{ steps.plan.outputs.stdout }}
             \`\`\`
