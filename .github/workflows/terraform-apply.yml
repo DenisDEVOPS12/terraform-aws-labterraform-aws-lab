@@ -70,6 +70,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # A PAT is required here instead of the default GITHUB_TOKEN: GitHub
+          # does not let pushes made with GITHUB_TOKEN trigger other workflows
+          # (anti-recursion safeguard), which would silently stop this tag
+          # from ever triggering terraform-apply-prod.yml.
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Create and push CalVer tag
         run: |
