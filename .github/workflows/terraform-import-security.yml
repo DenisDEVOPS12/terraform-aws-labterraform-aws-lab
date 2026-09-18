@@ -1,0 +1,39 @@
+name: Terraform Import (security, one-time)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  import:
+    name: Import vasia_pupkin into state
+    runs-on: ubuntu-latest
+    environment: Security
+
+    defaults:
+      run:
+        working-directory: environments/security
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Import existing vasia_pupkin IAM user
+        run: terraform import module.vasia_pupkin.aws_iam_user.this vasia_pupkin
