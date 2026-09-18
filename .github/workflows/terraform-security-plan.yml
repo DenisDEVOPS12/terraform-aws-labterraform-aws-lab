@@ -23,6 +23,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug OIDC token claims
+        run: |
+          echo "role-to-assume resolved to: '${{ vars.AWS_ROLE_ARN }}'"
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
+          MOD=$(( ${#PAYLOAD} % 4 ))
+          if [ "$MOD" -eq 2 ]; then PAYLOAD="${PAYLOAD}=="; elif [ "$MOD" -eq 3 ]; then PAYLOAD="${PAYLOAD}="; fi
+          echo "$PAYLOAD" | base64 -d | jq .
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
