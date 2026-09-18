@@ -14,3 +14,16 @@ module "notifications" {
   environment  = "security"
   create_queue = false
 }
+
+# -----------------------------------------------------
+# vasia_pupkin — created directly in this account, so
+# they only ever exist here and have no standing access
+# to dev/prod. ReadOnlyAccess only.
+# -----------------------------------------------------
+module "vasia_pupkin" {
+  source = "../../modules/iam-user"
+
+  user_name   = "vasia_pupkin"
+  path        = "/security/"
+  policy_arns = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
+}
