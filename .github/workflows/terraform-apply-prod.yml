@@ -2,7 +2,7 @@ name: Terraform Apply (prod release)
 
 on:
   push:
-    tags: ['20??.??.??-*']
+    tags: ['20*.*.*-*']
 
 permissions:
   contents: read
