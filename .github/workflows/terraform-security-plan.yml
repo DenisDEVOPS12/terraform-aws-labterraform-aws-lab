@@ -13,7 +13,7 @@ jobs:
   plan:
     name: Terraform Plan (security)
     runs-on: ubuntu-latest
-    environment: security
+    environment: Security
 
     defaults:
       run:

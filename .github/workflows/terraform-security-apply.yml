@@ -12,7 +12,7 @@ jobs:
   apply:
     name: Terraform Apply (security)
     runs-on: ubuntu-latest
-    environment: security
+    environment: Security
 
     defaults:
       run:
